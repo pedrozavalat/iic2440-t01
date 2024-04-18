@@ -1,0 +1,25 @@
+/*
+Dada una region, entrega el numero de unidades vendidas al mes para cada fruta.
+*/
+
+WITH ordenes_reg_1 AS (
+    SELECT id_usuario, 
+        id_orden, 
+        id_region, 
+        id_fruta, 
+        EXTRACT(MONTH FROM fecha) as mes, 
+        cantidad
+    FROM `iic2440.ordenes_compra`
+    WHERE id_region = 0
+),
+frutas_por_mes AS (
+    SELECT mes, id_fruta,
+    SUM(cantidad) OVER (item_window) AS unidades_vendidas,
+    ROW_NUMBER() OVER (item_window) AS ranking
+    FROM ordenes_reg_1
+    QUALIFY ranking = 1
+    WINDOW item_window AS (PARTITION BY mes, id_fruta ORDER BY mes ASC)
+)
+
+SELECT mes, id_fruta, unidades_vendidas
+FROM frutas_por_mes

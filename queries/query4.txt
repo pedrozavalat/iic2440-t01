@@ -1,0 +1,29 @@
+/*Calcula para cada semana el dinero que ha entrado a la tienda dicha semana. Luego entrega el dinero entrante acumulado.*/
+/*
+Truncamos la semana al primer dia de la semana (asume domingo como primer dia). 
+Por ejemplo:
+- Fecha original: 2023-12-23 (Sabado) -> Fecha truncada: 2023-12-17 (Domingo anterior)
+*/
+WITH ordenes_compra AS (
+  SELECT 
+    DATE_TRUNC(fecha, WEEK) AS semana, 
+    precio * cantidad AS dinero_entrante
+  FROM `iic2440.ordenes_compra` 
+  JOIN `iic2440.Frutas` AS frutas
+  ON `iic2440.ordenes_compra`.id_fruta = frutas.id_fruta
+),
+dinero_por_semana AS (
+  SELECT semana,
+  SUM(dinero_entrante) OVER (item_window) AS dinero_entrante,
+  FROM ordenes_compra
+  QUALIFY (ROW_NUMBER() OVER (item_window) = 1)
+  WINDOW item_window AS (PARTITION BY semana ORDER BY semana) 
+)
+
+SELECT *,
+  SUM(dinero_entrante) OVER (
+    ORDER BY semana ASC 
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW 
+  ) as dinero_acumulado
+FROM dinero_por_semana
+

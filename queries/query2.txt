@@ -1,0 +1,32 @@
+/*
+Dado un cliente, entrega como ha evolucionado el dinero gastado por el cliente en el tiempo.
+*/
+
+WITH gastos_por_orden AS (
+    SELECT 
+        ordenes_compra.id_usuario, 
+        ordenes_compra.fecha, 
+        Frutas.id_fruta, 
+        ordenes_compra.cantidad * frutas.precio AS dinero_gastado 
+    FROM `iic2440.ordenes_compra` AS ordenes_compra
+    JOIN `iic2440.Frutas` AS frutas 
+    ON ordenes_compra.id_fruta = frutas.id_fruta
+    WHERE id_usuario = 1 -- Para el cliente con ID = 1
+),
+evolucion_gastos AS (
+    SELECT *, 
+    SUM(dinero_gastado) OVER (item_window) AS gasto_diario,
+    ROW_NUMBER() OVER (item_window) AS ranking
+    FROM gastos_por_orden
+    QUALIFY ranking = 1
+    WINDOW item_window AS (PARTITION BY fecha ORDER BY fecha ASC )
+)
+
+/*
+Hacemos un qualify, ya que obtenemos la suma del dinero gastado por dia.
+Al hacer el SUM, obtenemos tuplas repetidas, con los m,ismos valores.
+Por lo tanto, escogemos la primera para evitar duplicados. 
+*/
+
+SELECT id_usuario, fecha, gasto_diario
+FROM evolucion_gastos

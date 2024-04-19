@@ -1,0 +1,25 @@
+/*Para cada region y mes, entrega la fruta mas vendida.*/
+WITH ordenes_compra AS (
+  SELECT id_region, frutas.id_fruta, nombre, precio, cantidad,
+    EXTRACT(MONTH FROM fecha) AS mes
+  FROM `iic2440.ordenes_compra` 
+  JOIN `iic2440.Frutas` AS frutas
+  ON `iic2440.ordenes_compra`.id_fruta = frutas.id_fruta
+),
+cantidad_fruta_mes AS (
+  SELECT *,
+  SUM(cantidad) OVER (item_window) as cantidad_total,
+  FROM ordenes_compra
+  WINDOW item_window AS (PARTITION BY id_region, mes, id_fruta ORDER BY id_fruta DESC)
+),
+ranking_fruta_mes AS (
+  SELECT *,
+  ROW_NUMBER() OVER (
+    PARTITION BY id_region, mes ORDER BY cantidad_total DESC
+  ) AS ranking
+  FROM cantidad_fruta_mes
+  QUALIFY ranking = 1
+)
+
+SELECT id_region, mes, nombre, cantidad_total
+FROM ranking_fruta_mes
